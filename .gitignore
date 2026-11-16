@@ -1,0 +1,8 @@
+/target/
+/.cargo-home/
+/.DS_Store
+/dist/
+__pycache__/
+*.pyc
+/.venv/
+/release-notes.md

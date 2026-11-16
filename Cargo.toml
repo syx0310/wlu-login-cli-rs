@@ -1,0 +1,33 @@
+[package]
+name = "wlu-login-cli"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.92"
+license = "Apache-2.0"
+description = "Westlake University SRUN network login CLI"
+repository = "https://github.com/syx0310/wlu-login-cli-rs"
+
+[features]
+default = ["tls"]
+tls = ["ureq/rustls"]
+
+[dependencies]
+base64 = "0.22"
+hmac = "0.12"
+if-addrs = "0.15"
+lexopt = "0.3"
+md-5 = "0.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+sha1 = "0.10"
+socket2 = { version = "0.6", features = ["all"] }
+ureq = { version = "3.3", default-features = false }
+url = "2"
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

@@ -1,0 +1,230 @@
+name: Build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION: '1.92.0'
+  CARGO_ZIGBUILD_VERSION: '0.24.1'
+  ZIG_VERSION: '0.14.1'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.matrix.outputs.version }}
+      linux: ${{ steps.matrix.outputs.linux }}
+      native: ${{ steps.matrix.outputs.native }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - id: matrix
+        run: python scripts/release.py prepare
+
+  checks:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2022]
+        variant: [tls, http-only]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          key: checks-${{ matrix.variant }}
+      - name: Format, lint, and test
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          flags=()
+          if [[ "$VARIANT" == http-only ]]; then flags+=(--no-default-features); fi
+          cargo fmt --all -- --check
+          cargo clippy --locked --all-targets "${flags[@]}" -- -D warnings
+          cargo test --locked --all-targets "${flags[@]}"
+
+  linux:
+    needs: [prepare, checks]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.linux) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      TARGET: ${{ matrix.target }}
+      BUILD_TARGET: ${{ matrix.build_target }}
+      VARIANT: ${{ matrix.variant }}
+      QEMU: ${{ matrix.qemu }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          key: linux-${{ matrix.target }}-${{ matrix.variant }}
+      - name: Install cross compiler
+        run: python -m pip install "cargo-zigbuild==$CARGO_ZIGBUILD_VERSION" "ziglang==$ZIG_VERSION"
+      - name: Build
+        run: |
+          flags=()
+          if [[ "$VARIANT" == http-only ]]; then flags+=(--no-default-features); fi
+          cargo zigbuild --release --locked --target "$BUILD_TARGET" "${flags[@]}"
+      - name: Verify architecture and static musl linkage
+        run: python scripts/release.py verify-elf "target/$TARGET/release/wlu-login-cli" "$TARGET"
+      - name: Install QEMU for static executable tests
+        if: matrix.qemu != ''
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-user
+      - name: Exercise static binary and network interface binding
+        if: matrix.qemu != ''
+        run: |
+          flags=()
+          if [[ "$VARIANT" == http-only ]]; then flags+=(--http-only); fi
+          sudo "$(command -v python)" scripts/smoke.py "target/$TARGET/release/wlu-login-cli" --runner "qemu-$QEMU" --interface lo "${flags[@]}"
+      - name: Package
+        run: python scripts/release.py package "$TARGET" "$VARIANT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-${{ matrix.target }}-${{ matrix.variant }}
+          path: dist/*
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  native:
+    needs: [prepare, checks]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.native) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      TARGET: ${{ matrix.target }}
+      VARIANT: ${{ matrix.variant }}
+      RUSTFLAGS: ${{ contains(matrix.target, 'windows') && '-C target-feature=+crt-static' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          key: native-${{ matrix.target }}-${{ matrix.variant }}
+      - name: Build and test
+        run: |
+          flags=()
+          if [[ "$VARIANT" == http-only ]]; then flags+=(--no-default-features); fi
+          cargo test --locked --target "$TARGET" "${flags[@]}"
+          cargo build --release --locked --target "$TARGET" "${flags[@]}"
+      - name: Exercise packaged executable
+        run: |
+          extension=''
+          if [[ "$TARGET" == *windows* ]]; then extension='.exe'; fi
+          flags=()
+          if [[ "$VARIANT" == http-only ]]; then flags+=(--http-only); fi
+          python scripts/smoke.py "target/$TARGET/release/wlu-login-cli$extension" "${flags[@]}"
+      - name: Package
+        run: python scripts/release.py package "$TARGET" "$VARIANT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-${{ matrix.target }}-${{ matrix.variant }}
+          path: dist/*
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  assemble:
+    needs: [prepare, linux, native]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: binary-*
+          merge-multiple: true
+          path: dist
+      - name: Validate complete release and generate checksums
+        run: python scripts/release.py assemble
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-bundle
+          path: |
+            dist/*
+            release-notes.md
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+          overwrite: true
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: assemble
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-bundle
+          path: release-bundle
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cd release-bundle
+          (cd dist && sha256sum -c SHA256SUMS)
+          if gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' > is-draft.txt 2>/dev/null; then
+            if [[ $(cat is-draft.txt) != true ]]; then
+              echo "Release $RELEASE_TAG is already published; refusing to replace it." >&2
+              exit 1
+            fi
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "$RELEASE_TAG" --notes-file release-notes.md
+          fi
+          gh release upload "$RELEASE_TAG" dist/* --clobber
+          flags=(--latest)
+          if [[ "$RELEASE_TAG" == *-* ]]; then flags=(--prerelease); fi
+          gh release edit "$RELEASE_TAG" --draft=false --notes-file release-notes.md "${flags[@]}"
