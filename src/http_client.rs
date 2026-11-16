@@ -76,7 +76,7 @@ impl BindTarget {
     fn for_interface(iface: &str) -> Result<Self> {
         #[cfg(target_os = "linux")]
         {
-            return Ok(Self::Device(iface.to_owned()));
+            Ok(Self::Device(iface.to_owned()))
         }
 
         #[cfg(not(target_os = "linux"))]
