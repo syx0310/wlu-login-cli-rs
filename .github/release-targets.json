@@ -1,34 +1,102 @@
 {
   "linux": [
-    {"target": "x86_64-unknown-linux-gnu", "glibc": "2.17"},
-    {"target": "x86_64-unknown-linux-musl", "qemu": "x86_64"},
-    {"target": "i686-unknown-linux-gnu", "glibc": "2.17"},
-    {"target": "i686-unknown-linux-musl", "qemu": "i386"},
-    {"target": "aarch64-unknown-linux-gnu", "glibc": "2.17"},
-    {"target": "aarch64-unknown-linux-musl", "qemu": "aarch64"},
-    {"target": "armv7-unknown-linux-gnueabihf", "glibc": "2.17"},
-    {"target": "armv7-unknown-linux-musleabihf", "qemu": "arm"},
-    {"target": "arm-unknown-linux-gnueabi", "glibc": "2.17"},
-    {"target": "arm-unknown-linux-musleabi", "qemu": "arm"},
-    {"target": "arm-unknown-linux-gnueabihf", "glibc": "2.17"},
-    {"target": "arm-unknown-linux-musleabihf", "qemu": "arm"},
-    {"target": "armv5te-unknown-linux-gnueabi", "glibc": "2.17"},
-    {"target": "armv5te-unknown-linux-musleabi", "qemu": "arm"},
-    {"target": "riscv64gc-unknown-linux-gnu", "glibc": "2.27"},
-    {"target": "riscv64gc-unknown-linux-musl", "qemu": "riscv64"},
-    {"target": "loongarch64-unknown-linux-gnu", "glibc": "2.36"},
-    {"target": "loongarch64-unknown-linux-musl", "qemu": "loongarch64"},
-    {"target": "powerpc64le-unknown-linux-gnu", "glibc": "2.17"},
-    {"target": "powerpc64le-unknown-linux-musl", "qemu": "ppc64le"},
-    {"target": "powerpc-unknown-linux-gnu", "glibc": "2.17"},
-    {"target": "powerpc64-unknown-linux-gnu", "glibc": "2.17"},
-    {"target": "s390x-unknown-linux-gnu", "glibc": "2.17"}
+    {
+      "target": "x86_64-unknown-linux-gnu",
+      "glibc": "2.17"
+    },
+    {
+      "target": "x86_64-unknown-linux-musl",
+      "qemu": "x86_64"
+    },
+    {
+      "target": "i686-unknown-linux-gnu",
+      "glibc": "2.17"
+    },
+    {
+      "target": "i686-unknown-linux-musl",
+      "qemu": "i386"
+    },
+    {
+      "target": "aarch64-unknown-linux-gnu",
+      "glibc": "2.17"
+    },
+    {
+      "target": "aarch64-unknown-linux-musl",
+      "qemu": "aarch64"
+    },
+    {
+      "target": "armv7-unknown-linux-gnueabihf",
+      "glibc": "2.17"
+    },
+    {
+      "target": "armv7-unknown-linux-musleabihf",
+      "qemu": "arm"
+    },
+    {
+      "target": "arm-unknown-linux-gnueabi",
+      "glibc": "2.17"
+    },
+    {
+      "target": "arm-unknown-linux-musleabi",
+      "qemu": "arm"
+    },
+    {
+      "target": "arm-unknown-linux-gnueabihf",
+      "glibc": "2.17"
+    },
+    {
+      "target": "arm-unknown-linux-musleabihf",
+      "qemu": "arm"
+    },
+    {
+      "target": "armv5te-unknown-linux-gnueabi",
+      "glibc": "2.17"
+    },
+    {
+      "target": "armv5te-unknown-linux-musleabi",
+      "qemu": "arm"
+    },
+    {
+      "target": "riscv64gc-unknown-linux-gnu",
+      "glibc": "2.27"
+    },
+    {
+      "target": "riscv64gc-unknown-linux-musl",
+      "qemu": "riscv64"
+    },
+    {
+      "target": "loongarch64-unknown-linux-gnu",
+      "glibc": "2.36"
+    },
+    {
+      "target": "loongarch64-unknown-linux-musl",
+      "qemu": "loongarch64"
+    },
+    {
+      "target": "s390x-unknown-linux-gnu",
+      "glibc": "2.17"
+    }
   ],
   "native": [
-    {"target": "x86_64-apple-darwin", "os": "macos-15-intel"},
-    {"target": "aarch64-apple-darwin", "os": "macos-15"},
-    {"target": "x86_64-pc-windows-msvc", "os": "windows-2022"},
-    {"target": "i686-pc-windows-msvc", "os": "windows-2022"},
-    {"target": "aarch64-pc-windows-msvc", "os": "windows-11-arm"}
+    {
+      "target": "x86_64-apple-darwin",
+      "os": "macos-15-intel"
+    },
+    {
+      "target": "aarch64-apple-darwin",
+      "os": "macos-15"
+    },
+    {
+      "target": "x86_64-pc-windows-msvc",
+      "os": "windows-2022"
+    },
+    {
+      "target": "i686-pc-windows-msvc",
+      "os": "windows-2022"
+    },
+    {
+      "target": "aarch64-pc-windows-msvc",
+      "os": "windows-11-arm"
+    }
   ]
 }

@@ -68,6 +68,7 @@ jobs:
           cargo test --locked --all-targets "${flags[@]}"
 
   linux:
+    name: Linux / ${{ matrix.target }} / ${{ matrix.variant }}
     needs: [prepare, checks]
     strategy:
       fail-fast: false
@@ -94,10 +95,7 @@ jobs:
       - name: Install cross compiler
         run: python -m pip install "cargo-zigbuild==$CARGO_ZIGBUILD_VERSION" "ziglang==$ZIG_VERSION"
       - name: Build
-        run: |
-          flags=()
-          if [[ "$VARIANT" == http-only ]]; then flags+=(--no-default-features); fi
-          cargo zigbuild --release --locked --target "$BUILD_TARGET" "${flags[@]}"
+        run: python scripts/release.py build "$TARGET" "$VARIANT"
       - name: Verify architecture and static musl linkage
         run: python scripts/release.py verify-elf "target/$TARGET/release/wlu-login-cli" "$TARGET"
       - name: Install QEMU for static executable tests
@@ -123,6 +121,7 @@ jobs:
           overwrite: true
 
   native:
+    name: Native / ${{ matrix.target }} / ${{ matrix.variant }}
     needs: [prepare, checks]
     strategy:
       fail-fast: false

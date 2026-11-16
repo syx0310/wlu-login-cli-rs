@@ -1,0 +1,10 @@
+# Copy to ~/.wlu-login-cli.yaml and replace the account and interface values.
+net:
+  endpoint: "http://10.1.10.1"
+  acid: "1"
+  ua_preset: "windows-chrome"
+  auth:
+    username: "YOUR_STUDENT_ID"
+    password: "YOUR_PASSWORD"
+    # Use the real OS device name; remove this line to use the default route.
+    interface: "eth1"

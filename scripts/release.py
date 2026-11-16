@@ -55,6 +55,15 @@ def prepare():
     print(json.dumps(output, indent=2))
 
 
+def build(target, variant):
+    entry = next(item for items in targets().values() for item in items if item["target"] == target)
+    build_target = target + ("." + entry["glibc"] if "glibc" in entry else "")
+    command = ["cargo", "zigbuild", "--release", "--locked", "--target", build_target]
+    if variant == "http-only":
+        command.append("--no-default-features")
+    subprocess.run(command, cwd=ROOT, check=True)
+
+
 def verify_elf(path, target):
     data = path.read_bytes()
     if data[:4] != b"\x7fELF":
@@ -64,8 +73,7 @@ def verify_elf(path, target):
     expected = {
         "x86_64": 62, "i686": 3, "aarch64": 183, "armv7": 40,
         "arm": 40, "armv5te": 40, "riscv64gc": 243,
-        "loongarch64": 258, "powerpc64le": 21, "powerpc64": 21,
-        "powerpc": 20, "s390x": 22,
+        "loongarch64": 258, "s390x": 22,
     }[target.split("-")[0]]
     if machine != expected:
         raise ValueError(f"wrong ELF architecture: {machine}, expected {expected}")
@@ -109,10 +117,13 @@ def package(target, variant):
         "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
         "binary_bytes": binary.stat().st_size,
     }
+    entry = next(item for items in targets().values() for item in items if item["target"] == target)
+    info["glibc_baseline"] = entry.get("glibc")
     members = {
         executable: (binary.read_bytes(), 0o755),
         "README.md": ((ROOT / "README.md").read_bytes(), 0o644),
         "LICENSE": ((ROOT / "LICENSE").read_bytes(), 0o644),
+        "config.example.yaml": ((ROOT / "config.example.yaml").read_bytes(), 0o644),
         "build-info.json": ((json.dumps(info, indent=2) + "\n").encode(), 0o644),
     }
     output = ROOT / "dist" / asset_name(target, variant)
@@ -205,6 +216,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("prepare")
+    builder = sub.add_parser("build")
+    builder.add_argument("target")
+    builder.add_argument("variant", choices=VARIANTS)
     pack = sub.add_parser("package")
     pack.add_argument("target")
     pack.add_argument("variant", choices=VARIANTS)
@@ -215,6 +229,8 @@ def main():
     args = parser.parse_args()
     if args.command == "prepare":
         prepare()
+    elif args.command == "build":
+        build(args.target, args.variant)
     elif args.command == "package":
         package(args.target, args.variant)
     elif args.command == "verify-elf":

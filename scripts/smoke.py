@@ -58,9 +58,9 @@ def main():
         assert f"wlu-login-cli {version}" in run(["--version"])
         with tempfile.TemporaryDirectory() as directory:
             endpoint = f"http://127.0.0.1:{server.server_port}"
-            common = ["--config", str(Path(directory) / "config.yaml"), "-e", endpoint, "-a", "1"]
-            if args.interface:
-                common += ["-f", args.interface]
+            config = Path(directory) / "config.yaml"
+            config.write_bytes((root / "config.example.yaml").read_bytes())
+            common = ["--config", str(config), "-e", endpoint, "-a", "1", "-f", args.interface or ""]
             assert "fixture" in run(["net", "info"] + common)
             run(["net", "login", "-u", "test+user@example.edu", "-p", "test & password"] + common)
             login = next(query for path, query in seen if path == "/cgi-bin/srun_portal")

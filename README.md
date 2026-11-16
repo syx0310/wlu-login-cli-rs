@@ -11,8 +11,8 @@
 - `tls`：支持 HTTP / HTTPS，默认推荐。
 - `http-only`：移除 TLS 以减小体积，仅支持 HTTP。
 - `linux-musl`：**静态链接，适用于 OpenWrt、Alpine 及其他匹配架构的 Linux 系统**。
-- `linux-gnu`：动态链接 glibc，普通目标要求 glibc 2.17+；RISC-V 要求 2.27+，LoongArch 要求 2.36+。
-- Windows 使用 `.zip`，Linux / macOS 使用 `.tar.gz`。包内包含可执行文件、本文档、许可证和 `build-info.json`。
+- `linux-gnu`：动态链接 glibc，普通目标要求 glibc 2.17+；RISC-V 为 2.27+，LoongArch 为 2.36+。包内 `build-info.json` 记录对应基线。
+- Windows 使用 `.zip`，Linux / macOS 使用 `.tar.gz`。包内包含可执行文件、配置样本、本文档、许可证和 `build-info.json`。
 
 例如 x86-64 OpenWrt 使用 `wlu-login-cli-v0.0.1-x86_64-unknown-linux-musl-tls.tar.gz`。
 同名的 `linux-gnu` 文件依赖 glibc 加载器，在 OpenWrt 上可能出现“文件存在但 not found”。
@@ -30,13 +30,11 @@
 | Linux ARMv5TE | `armv5te-unknown-linux-gnueabi` / `armv5te-unknown-linux-musleabi` |
 | Linux RISC-V 64 | `riscv64gc-unknown-linux-gnu` / `riscv64gc-unknown-linux-musl` |
 | Linux LoongArch64 | `loongarch64-unknown-linux-gnu` / `loongarch64-unknown-linux-musl` |
-| Linux PowerPC64 LE | `powerpc64le-unknown-linux-gnu` / `powerpc64le-unknown-linux-musl` |
-| Linux PowerPC / PowerPC64 BE | `powerpc-unknown-linux-gnu` / `powerpc64-unknown-linux-gnu` |
 | Linux s390x | `s390x-unknown-linux-gnu` |
 | macOS Intel / Apple Silicon | `x86_64-apple-darwin` / `aarch64-apple-darwin` |
 | Windows x86-64 / x86 / ARM64 | `x86_64-pc-windows-msvc` / `i686-pc-windows-msvc` / `aarch64-pc-windows-msvc` |
 
-当前矩阵共 28 个目标、56 个构建包。以实际 Release 文件和 `.github/release-targets.json` 为准。
+当前矩阵共 24 个目标、48 个构建包。以实际 Release 文件和 `.github/release-targets.json` 为准。
 
 解压后运行 `./wlu-login-cli --help`；Windows 运行 `wlu-login-cli.exe --help`。
 `SHA256SUMS` 提供所有发布文件的 SHA-256；单个包可用 `sha256sum 包名` 核对，下载全部文件后可执行 `sha256sum -c SHA256SUMS`。
@@ -52,6 +50,22 @@ wlu-login-cli net internet -a 1
 
 默认认证地址是 `http://10.1.10.1`，配置文件是 `$HOME/.wlu-login-cli.yaml`。
 `--config FILE` 指定其他配置文件；`--save` 保存本次生效的参数。
+
+仓库和每个发布包均包含 [config.example.yaml](config.example.yaml)。样本如下：
+
+```yaml
+net:
+  endpoint: "http://10.1.10.1"
+  acid: "1"
+  ua_preset: "windows-chrome"
+  auth:
+    username: "YOUR_STUDENT_ID"
+    password: "YOUR_PASSWORD"
+    interface: "eth1"
+```
+
+将样本复制到 `~/.wlu-login-cli.yaml`，填写账号、密码和真实网卡名，即可直接执行 `wlu-login-cli net login`。
+无需绑定网卡时删除 `interface`，也可以用 `wlu-login-cli --config ./config.example.yaml net login` 指定配置路径。
 
 ### 网卡绑定
 
